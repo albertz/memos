@@ -72,17 +72,20 @@ def resolveShortlink(url):
 		
 mydir = os.path.dirname(__file__)
 LogFile = mydir + "/twitter.log"
-print "logfile:", LogFile
 
-try:
-	log = eval(open(LogFile).read())
-	assert isinstance(log, dict)
-except IOError: # e.g. file-not-found. that's ok
-	log = {}
-except:
-	print "logfile reading error"
-	sys.excepthook(*sys.exc_info())
-	log = {}
+def loadLog():
+	global log
+	print "logfile:", LogFile
+	
+	try:
+		log = eval(open(LogFile).read())
+		assert isinstance(log, dict)
+	except IOError: # e.g. file-not-found. that's ok
+		log = {}
+	except:
+		print "logfile reading error"
+		sys.excepthook(*sys.exc_info())
+		log = {}
 
 def betterRepr(o):
 	# the main difference: this one is deterministic
@@ -103,7 +106,7 @@ def saveLog():
 	f.write("\n")
 
 def formatDate(t):
-	return time.strftime("%Y-%m-%d %H:%M:%S", t)
+	return time.strftime("%Y-%m-%d %H:%M:%S +0000", t)
 	
 # log is dict: (date, id) -> tweet, date as in formatDate
 
@@ -177,6 +180,7 @@ def getNewTweets():
 		if not pageNum: break
 	
 def main():
+	loadLog()
 	updateOldTweets()
 	getNewTweets()
 
