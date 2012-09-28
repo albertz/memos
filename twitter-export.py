@@ -105,6 +105,8 @@ def saveLog():
 	f.write("\n")
 
 def formatDate(t):
+	# if you used an old script which didn't saved the UTC stamp, use this script:
+	# https://github.com/albertz/memos/blob/7a19a7cc4a3fcb2f1daebbc45e2da896032704a2/twitter-fixdates.py
 	return time.strftime("%Y-%m-%d %H:%M:%S +0000", t)
 	
 # log is dict: (date, id) -> tweet, date as in formatDate
