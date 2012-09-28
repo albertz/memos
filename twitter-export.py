@@ -75,7 +75,6 @@ LogFile = mydir + "/twitter.log"
 
 def loadLog():
 	global log
-	print "logfile:", LogFile
 	
 	try:
 		log = eval(open(LogFile).read())
@@ -180,6 +179,7 @@ def getNewTweets():
 		if not pageNum: break
 	
 def main():
+	print "logfile:", LogFile
 	loadLog()
 	updateOldTweets()
 	getNewTweets()
