@@ -151,7 +151,7 @@ def getNewTweets():
 	from itertools import count
 	for pageNum in count(1):
 		print "> page", pageNum
-		data = getXml("https://twitter.com/statuses/user_timeline/%s.xml?page=%i&count=%i" % (twitterUser, pageNum, DataCount))
+		data = getXml("https://api.twitter.com/1/statuses/user_timeline.xml?screen_name=%s&page=%i&count=%i" % (twitterUser, pageNum, DataCount))
 	
 		statuses = []	
 		for s in data.statuses.childGenerator():
