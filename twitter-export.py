@@ -123,6 +123,10 @@ def updateTweetFromSource(tweet, s):
 
 ShortlinkDomains = ["bit.ly", "goo.gl", "youtu.be", "t.co"]
 def linksInText(s):
+	s = unicode(s)
+	# do some replaces for better splitting
+	s = s.replace("(", " ")
+	s = s.replace(")", " ")
 	for part in s.split():
 		if part.startswith("http://") or part.startswith("https://"):
 			yield part
