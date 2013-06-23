@@ -136,6 +136,7 @@ def lastStatusId():
 	return max([tweetId for (tweetDate, tweetId) in log.keys()] + [0])
 
 def getNewTweets():
+	# https://dev.twitter.com/docs/working-with-timelines
 	while True:
 		data = api.user_timeline(since_id=lastStatusId())
 
