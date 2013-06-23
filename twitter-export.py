@@ -14,36 +14,9 @@ consumer_secret = "k8C06gxSs2qbZtapAm3D9BEwat5ceDcMtCiStFRNU"
 import os
 oauth_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "twitter_auth_data.json")
 
-import time, os, sys
-import BeautifulSoup
-from urllib2 import Request, HTTPError, URLError, urlopen, build_opener
+import time, sys
+from urllib2 import Request, HTTPError, URLError, build_opener
 from urlparse import urlparse
-
-def getXml(url):
-	while True:
-		try:
-			req = Request(url)
-			open_req = urlopen(req)
-			content = open_req.read()
-			content_type = open_req.headers.get('content-type')
-			break
-		except HTTPError, e:
-			print e
-			print e.hdrs
-			print e.read()
-			if e.code in (502,503): # bad gateway, Service Unavailable. happens if overloaded
-				print "waiting a few seconds"
-				time.sleep(2)
-				continue
-			if e.code == 400 and int(e.hdrs.get("X-RateLimit-Remaining", -1)) == 0:
-				print "rate limit exceeded. waiting 1h"
-				time.sleep(60 * 60)
-				continue
-			raise e
-		assert False
-	assert "xml" in content_type
-	soup = BeautifulSoup.BeautifulSoup(content)
-	return soup
 
 def resolveShortlink(url):
 	tries = 0
