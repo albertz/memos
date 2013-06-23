@@ -12,7 +12,9 @@ consumer_key = "EAoZyRlPKxlCkVruwSzEtQ"
 consumer_secret = "k8C06gxSs2qbZtapAm3D9BEwat5ceDcMtCiStFRNU"
 
 import os
-oauth_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "twitter_auth_data.json")
+mydir = os.path.dirname(__file__)
+LogFile = mydir + "/twitter.log"
+oauth_filename = mydir + "/twitter_auth_data.json"
 
 import time, sys
 from urllib2 import Request, HTTPError, URLError, build_opener
@@ -50,9 +52,6 @@ def resolveShortlink(url):
 			if origDomain != urlparse(lastUrl["url"]).hostname:
 				return lastUrl["url"]
 			raise e
-		
-mydir = os.path.dirname(__file__)
-LogFile = mydir + "/twitter.log"
 
 def loadLog():
 	global log
