@@ -5,6 +5,15 @@
 import better_exchook
 better_exchook.install()
 
+# via https://dev.twitter.com/apps/
+# not sure how to keep this a secret in an open source app
+# note that in your app, you must set *some* value for callback so that we can set any callback (https://dev.twitter.com/discussions/392). Otherwise error: Desktop applications only support the oauth_callback value 'oob'
+consumer_key = "EAoZyRlPKxlCkVruwSzEtQ"
+consumer_secret = "k8C06gxSs2qbZtapAm3D9BEwat5ceDcMtCiStFRNU"
+
+import os
+oauth_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "twitter_auth_data.json")
+
 twitterUser = "albertzeyer"
 # TODO: maybe allow other twitter users...
 
@@ -185,10 +194,135 @@ def getNewTweets():
 			updateTweet(tweet)
 			saveLog()
 		if not pageNum: break
-	
+
+def login():
+	import tweetpony
+
+	auth_data = None
+	def finalize():
+		api = tweetpony.API(
+			consumer_key=consumer_key,
+			consumer_secret=consumer_secret,
+			access_token=auth_data['access_token'],
+			access_token_secret=auth_data['access_token_secret'])
+
+	import json
+	try:
+		with open(oauth_filename, "r") as f:
+			auth_data = json.loads(f.read())
+	except IOError:
+		pass
+	else:
+		try:
+			finalize()
+		except tweetpony.APIError as err:
+			print "Twitter login error:", err, err.code, err.description
+			print "trying to relogin..."
+		else:
+			return
+
+	#api = tweetpony.API(consumer_key = tweetpony.CONSUMER_KEY, consumer_secret = tweetpony.CONSUMER_SECRET)
+	api = tweetpony.API(consumer_key = consumer_key, consumer_secret = consumer_secret)
+
+	# Start a small webserver to provide a simple callback URL to
+	# get the oauth token.
+	class OAuthReturnHandler:
+		def __init__(oself):
+			oself.httpd_access_token_callback = None
+
+			import BaseHTTPServer
+			class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
+				def log_message(self, format, *args): pass
+				def do_GET(webself):
+					pathStart = "/get_access_token?"
+					if webself.path.startswith(pathStart):
+						oself.httpd_access_token_callback = webself.path[len(pathStart):]
+
+						webself.send_response(200)
+						webself.send_header("Content-type", "text/html")
+						webself.end_headers()
+						webself.wfile.write("""
+							<html><head><title>OAuth return</title></head>
+							<body onload="onLoad()">
+							<script type="text/javascript">
+							function onLoad() {
+								ww = window.open(window.location, "_self");
+								ww.close();
+							}
+							</script>
+							</body></html>""")
+					else:
+						webself.send_response(404)
+						webself.end_headers()
+
+			oself.handler = Handler
+			def tryOrFail(fn):
+				try: fn(); return True
+				except: return False
+			# Try with some default ports first to avoid cluttering the users Google Authorized Access list.
+			tryOrFail(lambda: oself.startserver(port = 8123)) or \
+			tryOrFail(lambda: oself.startserver(port = 8321)) or \
+			oself.startserver(port = 0)
+
+			_,oself.port = oself.httpd.server_address
+			oself.oauth_callback_url = "http://localhost:%d/get_access_token" % oself.port
+
+		def startserver(self, port):
+			import BaseHTTPServer
+			self.httpd = BaseHTTPServer.HTTPServer(("", port), self.handler)
+
+		def wait_callback_response(self):
+			while self.httpd_access_token_callback == None:
+				self.httpd.handle_request()
+			return self.httpd_access_token_callback
+
+	oauthreturnhandler = OAuthReturnHandler()
+
+	# monkey-patch. we need to use POST for callback_url (https://dev.twitter.com/docs/api/1/get/oauth/authorize)
+	# upstream bug report: https://github.com/Mezgrman/TweetPony/issues/5
+	def get_request_token(self, callback_url = None):
+		url = self.build_request_url(self.oauth_root, 'request_token')
+		resp = self.do_request("POST", url, callback_url, is_json = False)
+		token_data = self.parse_qs(resp)
+		self.set_request_token(token_data['oauth_token'], token_data['oauth_token_secret'])
+		return (self.request_token, self.request_token_secret, token_data.get('oauth_callback_confirmed'))
+	tweetpony.API.get_request_token = get_request_token
+
+	# monkey-patch to get detailed error information
+	# workaround for this issue: https://github.com/Mezgrman/TweetPony/issues/6
+	import requests
+	orig_post = requests.post
+	def post_wrapper(*args, **kwargs):
+		resp = orig_post(*args, **kwargs)
+		if resp.status_code != 200:
+			print "POST error code", resp.status_code, resp.description
+			print resp
+			print resp.text
+		return resp
+	requests.post = post_wrapper
+
+	auth_url = api.get_auth_url(callback_url=oauthreturnhandler.oauth_callback_url)
+	print "open oauth login page"
+	import webbrowser; webbrowser.open(auth_url)
+
+	print "waiting for redirect callback ...",
+	httpd_access_token_callback = oauthreturnhandler.wait_callback_response()
+	print "done login"
+	from urlparse import parse_qs
+	token = parse_qs(httpd_access_token_callback)
+
+	api.authenticate(token["oauth_verifier"])
+	auth_data = {'access_token': api.access_token, 'access_token_secret': api.access_token_secret}
+
+	with open(oauth_filename, 'w') as f:
+		f.write(json.dumps(auth_data))
+
+	finalize()
+
 def main():
 	print "logfile:", LogFile
 	loadLog()
+	login()
 	updateOldTweets()
 	getNewTweets()
 
