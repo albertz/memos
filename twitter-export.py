@@ -120,14 +120,15 @@ def formatDate(t):
 # log is dict: (date, id) -> tweet, date as in formatDate
 
 def updateTweetFromSource(tweet, s):
-	tweet["text"] = s.find("text").text
-	tweetGeo = s.find("georss:polygon")
-	tweet["geo"] = tweetGeo.text if tweetGeo else None
-	if s.in_reply_to_status_id.text:
+	# https://dev.twitter.com/docs/api/1.1/get/statuses/user_timeline
+	# https://dev.twitter.com/docs/platform-objects/tweets
+	tweet["text"] = s.text
+	tweet["geo"] = s.coordinates
+	if s.in_reply_to_status_id:
 		retweetFrom = tweet.setdefault("retweeted-from", {})
-		retweetFrom["status-id"] = long(s.in_reply_to_status_id.text)
-		retweetFrom["user-id"] = long(s.in_reply_to_user_id.text)
-		retweetFrom["user-name"] = s.in_reply_to_screen_name.text
+		retweetFrom["status-id"] = long(s.in_reply_to_status_id)
+		retweetFrom["user-id"] = long(s.in_reply_to_user_id)
+		retweetFrom["user-name"] = s.in_reply_to_screen_name
 
 ShortlinkDomains = ["bit.ly", "goo.gl", "youtu.be", "t.co"]
 def linksInText(s):
@@ -169,7 +170,7 @@ def getNewTweets():
 
 		for s in data:
 			tweetId = long(s.id)
-			tweetDate = formatDate(time.strptime(s.created_at, "%a %b %d %H:%M:%S +0000 %Y"))
+			tweetDate = formatDate(s.created_at.utctimetuple())
 			tweetKey = (tweetDate, tweetId)
 			if SkipOldWebupdate and tweetKey in log:
 				print "** hit old entry, finished"
