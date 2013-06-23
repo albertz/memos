@@ -14,9 +14,6 @@ consumer_secret = "k8C06gxSs2qbZtapAm3D9BEwat5ceDcMtCiStFRNU"
 import os
 oauth_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "twitter_auth_data.json")
 
-twitterUser = "albertzeyer"
-# TODO: maybe allow other twitter users...
-
 import time, os, sys
 import BeautifulSoup
 from urllib2 import Request, HTTPError, URLError, urlopen, build_opener
@@ -162,30 +159,21 @@ def updateOldTweets():
 SkipOldWebupdate = True
 DataCount = 200
 
+def lastStatusId():
+	return max([tweetId for (tweetDate, tweetId) in log.keys()] + [0])
+
 def getNewTweets():
-	from itertools import count
-	for pageNum in count(1):
-		print "> page", pageNum
-		data = getXml("https://api.twitter.com/1.1/statuses/user_timeline.xml?screen_name=%s&page=%i&count=%i" % (twitterUser, pageNum, DataCount))
-	
-		statuses = []	
-		for s in data.statuses.childGenerator():
-			if isinstance(s, (str,unicode)): continue
-			assert isinstance(s, BeautifulSoup.Tag)
-			assert s.name == "status"
-			statuses += [s]
-	
-		if not statuses:
-			print "** finished"
-			break
-			
-		for s in statuses:
-			tweetId = long(s.id.text)
-			tweetDate = formatDate(time.strptime(s.created_at.text, "%a %b %d %H:%M:%S +0000 %Y"))
+	while True:
+		data = api.user_timeline(since_id=lastStatusId())
+		#data = getXml("https://api.twitter.com/1.1/statuses/user_timeline.xml?screen_name=%s&page=%i&count=%i" % (twitterUser, pageNum, DataCount))
+
+		for s in data:
+			tweetId = long(s.id)
+			tweetDate = formatDate(time.strptime(s.created_at, "%a %b %d %H:%M:%S +0000 %Y"))
 			tweetKey = (tweetDate, tweetId)
 			if SkipOldWebupdate and tweetKey in log:
 				print "** hit old entry, finished"
-				pageNum = None
+				data = None
 				break
 			tweet = log.setdefault(tweetKey, {})
 			tweet["id"] = tweetId
@@ -193,18 +181,23 @@ def getNewTweets():
 			updateTweetFromSource(tweet, s)
 			updateTweet(tweet)
 			saveLog()
-		if not pageNum: break
+
+		if not data:
+			print "** finished"
+			break
 
 def login():
 	import tweetpony
 
 	auth_data = None
 	def finalize():
+		global api, twitterUser
 		api = tweetpony.API(
 			consumer_key=consumer_key,
 			consumer_secret=consumer_secret,
 			access_token=auth_data['access_token'],
 			access_token_secret=auth_data['access_token_secret'])
+		twitterUser = api.user
 
 	import json
 	try:
