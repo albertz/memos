@@ -138,9 +138,8 @@ def lastStatusId():
 def getNewTweets():
 	while True:
 		data = api.user_timeline(since_id=lastStatusId())
-		#data = getXml("https://api.twitter.com/1.1/statuses/user_timeline.xml?screen_name=%s&page=%i&count=%i" % (twitterUser, pageNum, DataCount))
 
-		for s in data:
+		for s in reversed(list(data)):
 			tweetId = long(s.id)
 			tweetDate = formatDate(s.created_at.utctimetuple())
 			tweetKey = (tweetDate, tweetId)
