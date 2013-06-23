@@ -23,6 +23,8 @@ def getXml(url):
 			break
 		except HTTPError, e:
 			print e
+			print e.hdrs
+			print e.read()
 			if e.code in (502,503): # bad gateway, Service Unavailable. happens if overloaded
 				print "waiting a few seconds"
 				time.sleep(2)
