@@ -27,7 +27,7 @@ def getXml(url):
 				print "waiting a few seconds"
 				time.sleep(2)
 				continue
-			if e.code == 400 and int(e.hdrs["X-RateLimit-Remaining"]) == 0:
+			if e.code == 400 and int(e.hdrs.get("X-RateLimit-Remaining", -1)) == 0:
 				print "rate limit exceeded. waiting 1h"
 				time.sleep(60 * 60)
 				continue
