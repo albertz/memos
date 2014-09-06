@@ -12,7 +12,7 @@ for arg in sys.argv[1:]:
 	if arg.startswith("http://") or arg.startswith("https://"):
 		arg = twitter.resolveShortlink(arg)
 	arg = arg.lower()
-	searchTerms += [arg]
+	searchTerms += [arg.decode("utf8")]
 
 if not searchTerms:
 	usage()
