@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # https://twitter.com/statuses/user_timeline/albertzeyer.xml?page=x
 
@@ -77,7 +77,9 @@ def betterRepr(o):
 		return "{\n" + "".join(map(lambda (k,v): betterRepr(k) + ": " + betterRepr(v) + ",\n", sorted(o.iteritems()))) + "}"
 	# fallback
 	return repr(o)
-	
+
+# log is dict: (date, id) -> tweet, date as in formatDate
+
 def saveLog():
 	global log, LogFile
 	f = open(LogFile, "w")
@@ -88,13 +90,26 @@ def formatDate(t):
 	# if you used an old script which didn't saved the UTC stamp, use this script:
 	# https://github.com/albertz/memos/blob/7a19a7cc4a3fcb2f1daebbc45e2da896032704a2/twitter-fixdates.py
 	return time.strftime("%Y-%m-%d %H:%M:%S +0000", t)
-	
-# log is dict: (date, id) -> tweet, date as in formatDate
 
+def replaceIndexedText(txt, indicesReplacements):
+	p = 0
+	newTxt = ""
+	for (p1, p2), replacement in sorted(indicesReplacements.items()):
+		assert p <= p1
+		if p < p1:
+			newTxt += txt[p:p1]
+			p = p1
+		assert p1 < p2
+		newTxt += replacement
+		p = p2
+	newTxt += txt[p:]
+	return newTxt
+	
 def updateTweetFromSource(tweet, s):
 	# https://dev.twitter.com/docs/api/1.1/get/statuses/user_timeline
 	# https://dev.twitter.com/docs/platform-objects/tweets
-	tweet["text"] = s.text
+	tweet["text"] = replaceIndexedText(s.text,
+		{tuple(url.indices): url.expanded_url for url in s.entities.urls})
 	tweet["geo"] = s.coordinates
 	if s.in_reply_to_status_id:
 		retweetFrom = tweet.setdefault("retweeted-from", {})
