@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 
 def usage():
 	print __file__, "<search terms>"
